@@ -1,222 +1,137 @@
-from tensorflow.keras import backend as K
-import numpy as np
 import tensorflow as tf
+import keras.backend as K
+from keras.losses import binary_crossentropy
 
-#           Dice loss          #
-
-def dice_loss(delta = 0.5, smooth = 1.):
-    
-    def loss_function(y_true, y_pred):
-        axis = identify_axis(y_true.get_shape())
-        # Calculate true positives (tp), false negatives (fn) and false positives (fp)
-        tp = K.sum(y_true * y_pred, axis=axis)
-        fn = K.sum(y_true * (1-y_pred), axis=axis)
-        fp = K.sum((1-y_true) * y_pred, axis=axis)
-        # Calculate Dice score
-        dice_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
-        # Sum up classes to one score
-        dice_loss = K.sum(1-dice_class, axis=[-1])
-        # adjusts loss to account for number of classes
-        num_classes = K.cast(K.shape(y_true)[-1],'float32')
-        dice_loss = dice_loss / num_classes
-        return dice_loss
-        
-    return loss_function
-
-#         Tversky loss         #
-
-def tversky_loss(delta = 0.7, smooth = 1.):
-  smoothing constant to prevent division by zero errors, by default 0.000001
-    """
-    def loss_function(y_true, y_pred):
-        axis = identify_axis(y_true.get_shape())
-        # Calculate true positives (tp), false negatives (fn) and false positives (fp)   
-        tp = K.sum(y_true * y_pred, axis=axis)
-        fn = K.sum(y_true * (1-y_pred), axis=axis)
-        fp = K.sum((1-y_true) * y_pred, axis=axis)
-        tversky_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
-        # Sum up classes to one score
-        tversky_loss = K.sum(1-tversky_class, axis=[-1])
-        # adjusts loss to account for number of classes
-        num_classes = K.cast(K.shape(y_true)[-1],'float32')
-        tversky_loss = tversky_loss / num_classes
-        return tversky_loss
-
-    return loss_function
-
-#       Dice coefficient       #
-
-def dice_coefficient(delta = 0.5, smooth = 1.):
-    def loss_function(y_true, y_pred):
-        axis = identify_axis(y_true.get_shape())
-        # Calculate true positives (tp), false negatives (fn) and false positives (fp)   
-        tp = K.sum(y_true * y_pred, axis=axis)
-        fn = K.sum(y_true * (1-y_pred), axis=axis)
-        fp = K.sum((1-y_true) * y_pred, axis=axis)
-        dice_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
-        # Sum up classes to one score
-        dice = K.sum(dice_class, axis=[-1])
-        # adjusts loss to account for number of classes
-        num_classes = K.cast(K.shape(y_true)[-1],'float32')
-        dice = dice / num_classes
-        return dice
-
-    return loss_function
-
-#          Combo loss          #
-def combo_loss(alpha=0.5,beta=0.5):
-  
-    def loss_function(y_true,y_pred):
-        dice = dice_coefficient()(y_true, y_pred)
-        axis = identify_axis(y_true.get_shape())
-        # Clip values to prevent division by zero error
-        epsilon = K.epsilon()
-        y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
-        cross_entropy = -y_true * K.log(y_pred)
-
-        if beta is not None:
-            beta_weight = np.array([beta, 1-beta])
-            cross_entropy = beta_weight * cross_entropy
-        # sum over classes
-        cross_entropy = K.mean(K.sum(cross_entropy, axis=[-1]))
-        if alpha is not None:
-            combo_loss = (alpha * cross_entropy) - ((1 - alpha) * dice)
-        else:
-            combo_loss = cross_entropy - dice
-        return combo_loss
-
-    return loss_function
-
-#      Focal Tversky loss      #
-def focal_tversky_loss(delta=0.7, gamma=0.75, smooth=1.):
- 
-    def loss_function(y_true, y_pred):
-        # Clip values to prevent division by zero error
-        epsilon = K.epsilon()
-        y_pred = K.clip(y_pred, epsilon, 1. - epsilon) 
-        axis = identify_axis(y_true.get_shape())
-        # Calculate true positives (tp), false negatives (fn) and false positives (fp)     
-        tp = K.sum(y_true * y_pred, axis=axis)
-        fn = K.sum(y_true * (1-y_pred), axis=axis)
-        fp = K.sum((1-y_true) * y_pred, axis=axis)
-        tversky_class = (tp + smooth)/(tp + delta*fn + (1-delta)*fp + smooth)
-        # Sum up classes to one score
-        focal_tversky_loss = K.sum(K.pow((1-tversky_class), gamma), axis=[-1])
-    	# adjusts loss to account for number of classes
-        num_classes = K.cast(K.shape(y_true)[-1],'float32')
-        focal_tversky_loss = focal_tversky_loss / num_classes
-        return focal_tversky_loss
-
-    return loss_function
+beta = 0.25
+alpha = 0.25
+gamma = 2
+epsilon = 1e-5
+smooth = 1
 
 
-#          Focal loss          #
-def focal_loss(alpha=0.25, beta=None, gamma_f=2.):
-    def loss_function(y_true, y_pred):
-        axis = identify_axis(y_true.get_shape())
-        # Clip values to prevent division by zero error
-        epsilon = K.epsilon()
-        y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
-        cross_entropy = -y_true * K.log(y_pred)
+class Semantic_loss_functions(object):
+    def __init__(self):
+        print ("semantic loss functions initialized")
 
-        if beta is not None:
-            beta_weight = np.array([beta, 1-beta])
-            cross_entropy = beta_weight * cross_entropy
+    def dice_coef(self, y_true, y_pred):
+        y_true_f = K.flatten(y_true)
+        y_pred_f = K.flatten(y_pred)
+        intersection = K.sum(y_true_f * y_pred_f)
+        return (2. * intersection + K.epsilon()) / (
+                    K.sum(y_true_f) + K.sum(y_pred_f) + K.epsilon())
 
-        if alpha is not None:
-            alpha_weight = np.array(alpha, dtype=np.float32)
-            focal_loss = alpha_weight * K.pow(1 - y_pred, gamma_f) * cross_entropy
-        else:
-            focal_loss = K.pow(1 - y_pred, gamma_f) * cross_entropy
+    def sensitivity(self, y_true, y_pred):
+        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+        possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+        return true_positives / (possible_positives + K.epsilon())
 
-        focal_loss = K.mean(K.sum(focal_loss, axis=[-1]))
-        return focal_loss
-        
-    return loss_function
+    def specificity(self, y_true, y_pred):
+        true_negatives = K.sum(
+            K.round(K.clip((1 - y_true) * (1 - y_pred), 0, 1)))
+        possible_negatives = K.sum(K.round(K.clip(1 - y_true, 0, 1)))
+        return true_negatives / (possible_negatives + K.epsilon())
 
-#       Hybrid Focal loss      #
-def hybrid_focal_loss(weight=None, alpha=0.25, beta=None, gamma=0.75, gamma_f=2.):
+    def convert_to_logits(self, y_pred):
+        y_pred = tf.clip_by_value(y_pred, tf.keras.backend.epsilon(),
+                                  1 - tf.keras.backend.epsilon())
+        return tf.math.log(y_pred / (1 - y_pred))
 
-    def loss_function(y_true,y_pred):
-      # Obtain Focal Dice loss
-      focal_tversky = focal_tversky_loss(gamma=gamma)(y_true,y_pred)
-      # Obtain Focal loss
-      focal = focal_loss(alpha=alpha, beta=beta, gamma_f=gamma_f)(y_true,y_pred)
-      # return weighted sum of Focal loss and Focal Dice loss
-      if weight is not None:
-        return (weight * focal_tversky) + ((1-weight) * focal)  
-      else:
-        return focal_tversky + focal
+    def weighted_cross_entropyloss(self, y_true, y_pred):
+        y_pred = self.convert_to_logits(y_pred)
+        pos_weight = beta / (1 - beta)
+        loss = tf.nn.weighted_cross_entropy_with_logits(logits=y_pred,
+                                                        targets=y_true,
+                                                        pos_weight=pos_weight)
+        return tf.reduce_mean(loss)
 
-    return loss_function
+    def focal_loss_with_logits(self, logits, targets, alpha, gamma, y_pred):
+        weight_a = alpha * (1 - y_pred) ** gamma * targets
+        weight_b = (1 - alpha) * y_pred ** gamma * (1 - targets)
 
+        return (tf.math.log1p(tf.exp(-tf.abs(logits))) + tf.nn.relu(
+            -logits)) * (weight_a + weight_b) + logits * weight_b
 
-#     Asymmetric Focal loss    #
-def asymmetric_focal_loss(delta=0.25, gamma=2.):
-    def loss_function(y_true, y_pred):
+    def focal_loss(self, y_true, y_pred):
+        y_pred = tf.clip_by_value(y_pred, tf.keras.backend.epsilon(),
+                                  1 - tf.keras.backend.epsilon())
+        logits = tf.math.log(y_pred / (1 - y_pred))
 
-        axis = identify_axis(y_true.get_shape())  
+        loss = self.focal_loss_with_logits(logits=logits, targets=y_true,
+                                      alpha=alpha, gamma=gamma, y_pred=y_pred)
 
-        epsilon = K.epsilon()
-        y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
-        cross_entropy = -y_true * K.log(y_pred)
+        return tf.reduce_mean(loss)
 
-	#calculate losses separately for each class, only suppressing background class
-        back_ce = K.pow(1 - y_pred[:,:,:,0], gamma) * cross_entropy[:,:,:,0]
-        back_ce =  (1 - delta) * back_ce
+    def depth_softmax(self, matrix):
+        sigmoid = lambda x: 1 / (1 + K.exp(-x))
+        sigmoided_matrix = sigmoid(matrix)
+        softmax_matrix = sigmoided_matrix / K.sum(sigmoided_matrix, axis=0)
+        return softmax_matrix
 
-        fore_ce = cross_entropy[:,:,:,1]
-        fore_ce = delta * fore_ce
+    def generalized_dice_coefficient(self, y_true, y_pred):
+        smooth = 1.
+        y_true_f = K.flatten(y_true)
+        y_pred_f = K.flatten(y_pred)
+        intersection = K.sum(y_true_f * y_pred_f)
+        score = (2. * intersection + smooth) / (
+                    K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+        return score
 
-        loss = K.mean(K.sum(tf.stack([back_ce, fore_ce],axis=-1),axis=-1))
-
+    def dice_loss(self, y_true, y_pred):
+        loss = 1 - self.generalized_dice_coefficient(y_true, y_pred)
         return loss
 
-    return loss_function
+    def bce_dice_loss(self, y_true, y_pred):
+        loss = binary_crossentropy(y_true, y_pred) + \
+               self.dice_loss(y_true, y_pred)
+        return loss / 2.0
 
-# Asymmetric Focal Tversky loss #
-def asymmetric_focal_tversky_loss(delta=0.7, gamma=0.75, smooth=1.):
- 
-    def loss_function(y_true, y_pred):
-        # Clip values to prevent division by zero error
-        epsilon = K.epsilon()
-        y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
+    def confusion(self, y_true, y_pred):
+        smooth = 1
+        y_pred_pos = K.clip(y_pred, 0, 1)
+        y_pred_neg = 1 - y_pred_pos
+        y_pos = K.clip(y_true, 0, 1)
+        y_neg = 1 - y_pos
+        tp = K.sum(y_pos * y_pred_pos)
+        fp = K.sum(y_neg * y_pred_pos)
+        fn = K.sum(y_pos * y_pred_neg)
+        prec = (tp + smooth) / (tp + fp + smooth)
+        recall = (tp + smooth) / (tp + fn + smooth)
+        return prec, recall
 
-        axis = identify_axis(y_true.get_shape())
-        # Calculate true positives (tp), false negatives (fn) and false positives (fp)     
-        tp = K.sum(y_true * y_pred, axis=axis)
-        fn = K.sum(y_true * (1-y_pred), axis=axis)
-        fp = K.sum((1-y_true) * y_pred, axis=axis)
-        dice_class = (tp + epsilon)/(tp + delta*fn + (1-delta)*fp + epsilon)
+    def true_positive(self, y_true, y_pred):
+        smooth = 1
+        y_pred_pos = K.round(K.clip(y_pred, 0, 1))
+        y_pos = K.round(K.clip(y_true, 0, 1))
+        tp = (K.sum(y_pos * y_pred_pos) + smooth) / (K.sum(y_pos) + smooth)
+        return tp
 
-        #calculate losses separately for each class, only enhancing foreground class
-        back_dice = (1-dice_class[:,0]) 
-        fore_dice = (1-dice_class[:,1]) * K.pow(1-dice_class[:,1], -gamma) 
+    def true_negative(self, y_true, y_pred):
+        smooth = 1
+        y_pred_pos = K.round(K.clip(y_pred, 0, 1))
+        y_pred_neg = 1 - y_pred_pos
+        y_pos = K.round(K.clip(y_true, 0, 1))
+        y_neg = 1 - y_pos
+        tn = (K.sum(y_neg * y_pred_neg) + smooth) / (K.sum(y_neg) + smooth)
+        return tn
 
-        # Sum up classes to one score
-        loss = K.mean(K.sum(tf.stack([back_dice,fore_dice],axis=-1), axis=-1))
+    def tversky_index(self, y_true, y_pred):
+        y_true_pos = K.flatten(y_true)
+        y_pred_pos = K.flatten(y_pred)
+        true_pos = K.sum(y_true_pos * y_pred_pos)
+        false_neg = K.sum(y_true_pos * (1 - y_pred_pos))
+        false_pos = K.sum((1 - y_true_pos) * y_pred_pos)
+        alpha = 0.7
+        return (true_pos + smooth) / (true_pos + alpha * false_neg + (
+                    1 - alpha) * false_pos + smooth)
 
-        # adjusts loss to account for number of classes
-        num_classes = K.cast(K.shape(y_true)[-1],'float32')
-        loss = loss / num_classes
-        return loss
+    def tversky_loss(self, y_true, y_pred):
+        return 1 - self.tversky_index(y_true, y_pred)
 
-    return loss_function
+    def focal_tversky(self, y_true, y_pred):
+        pt_1 = self.tversky_index(y_true, y_pred)
+        gamma = 0.75
+        return K.pow((1 - pt_1), gamma)
 
-
-
-#      Unified Focal loss      #
-def unified_focal_loss(weight=0.5, delta=0.6, gamma=0.2):
-
-    def loss_function(y_true,y_pred):
-      # Obtain Asymmetric Focal Tversky loss
-      asymmetric_ftl = asymmetric_focal_tversky_loss(delta=delta, gamma=gamma)(y_true,y_pred)
-      # Obtain Asymmetric Focal loss
-      asymmetric_fl = asymmetric_focal_loss(delta=delta, gamma=gamma)(y_true,y_pred)
-      # return weighted sum of Asymmetrical Focal loss and Asymmetric Focal Tversky loss
-      if weight is not None:
-        return (weight * asymmetric_ftl) + ((1-weight) * asymmetric_fl)  
-      else:
-        return asymmetric_ftl + asymmetric_fl
-
-    return loss_function
+    def log_cosh_dice_loss(self, y_true, y_pred):
+        x = self.dice_loss(y_true, y_pred)
+        return tf.math.log((tf.exp(x) + tf.exp(-x)) / 2.0)
