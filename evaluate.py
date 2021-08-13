@@ -5,7 +5,7 @@ from sklearn.metrics import jaccard_similarity_score
 
 
 
-model = BCL-UNet(input_size = (512,512,3))
+model = model(input_size = (512,512,3))
 model.summary()
 model.load_weights('...')
 predictions = model.predict(x_test, batch_size=2, verbose=1)
