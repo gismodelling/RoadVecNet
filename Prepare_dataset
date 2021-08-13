@@ -1,0 +1,104 @@
+# load dataset
+im_width = 512
+im_height = 512
+border = 5
+warnings.filterwarnings('ignore', category=UserWarning, module='skimage')
+seed = 42
+BATCH_SIZE = 2
+#
+ids = next(os.walk('...'))[2]
+print ('No. of images = ', len(ids))
+ids1 = next(os.walk('...'))[2]
+print ('No. of masks = ', len(ids1))
+#
+X = np.zeros((len(ids), im_height, im_width, 3), dtype = np.float32)
+y = np.zeros((len(ids1), im_height, im_width, 3), dtype = np.float32)
+#
+from tqdm.notebook import tqdm
+from skimage.transform import resize
+for n, id_ in tqdm (enumerate(ids), total = len(ids)):
+    img = load_img ('/data/ababdoll/Abi/paper6(road)/data/data_original/img/'+id_)
+    x_img = img_to_array(img)
+    x_img = resize(x_img, (512, 512, 3), mode = 'constant', preserve_range = True)
+    #x_img = x_img.transpo0se (2,0,1)
+    #x_img = x_img.reshape (im_height, im_width, 1)
+    X[n] = x_img/255.0 
+     
+for n, id_ in tqdm (enumerate(ids1), total = len(ids1)):
+    mask = load_img ('/data/ababdoll/Abi/paper6(road)/data/data_original/y/' +id_)
+    mask = img_to_array(mask)
+    mask = resize(mask, (512, 512, 3), mode = 'constant', preserve_range = True)
+    #mask = mask.transpose (2,0,1)
+    #mask = mask.reshape (im_height, im_width, 1)
+    y[n] = mask/255.0
+
+############## validation images
+ids_val = next(os.walk('/data/ababdoll/Abi/paper6(road)/data/data_original/img1/'))[2]
+print ('No. of val images = ', len(ids_val))
+ids1_val = next(os.walk('/data/ababdoll/Abi/paper6(road)/data/data_original/y1/'))[2]
+print ('No. of val masks = ', len(ids1_val))
+
+X_val = np.zeros((len(ids_val), im_height, im_width, 3), dtype = np.float32)
+y_val= np.zeros((len(ids1_val), im_height, im_width, 3), dtype = np.float32)
+
+
+for n, id_ in tqdm (enumerate(ids_val), total = len(ids_val)):
+    im_val = load_img ('/data/ababdoll/Abi/paper6(road)/data/data_original/img1/'+id_)
+    x_img_val = img_to_array(im_val)
+    x_img_val = resize(x_img_val, (512, 512, 3), mode = 'constant', preserve_range = True)
+    #x_img = x_img.transpo0se (2,0,1)
+    #x_img = x_img.reshape (im_height, im_width, 1)
+    X_val[n] = x_img_val/255.0 
+     
+for n, id_ in tqdm (enumerate(ids1_val), total = len(ids1_val)):
+    mask_val = load_img ('/data/ababdoll/Abi/paper6(road)/data/data_original/y1/' +id_)
+    mask_val = img_to_array(mask_val)
+    mask_val = resize(mask_val, (512, 512, 3), mode = 'constant', preserve_range = True)
+    #mask = mask.transpose (2,0,1)
+    #mask = mask.reshape (im_height, im_width, 1)
+    y_val[n] = mask_val/255.0  
+
+####### test images
+ids_test = next(os.walk('/data/ababdoll/Abi/paper6(road)/data/data_original/img2/'))[2]
+print ('No. of test_images = ', len(ids_test))
+ids1_test = next(os.walk('/data/ababdoll/Abi/paper6(road)/data/data_original/y2/'))[2]
+print ('No. of test_masks = ', len(ids1_test))
+
+X_test = np.zeros((len(ids_test), im_height, im_width, 3), dtype = np.float32)
+y_test = np.zeros((len(ids1_test), im_height, im_width, 3), dtype = np.float32)
+
+for n, id_ in tqdm (enumerate(ids_test), total = len(ids_test)):
+    img_test = load_img ('/data/ababdoll/Abi/paper6(road)/data/data_original/img2/'+id_)
+    x_img_test = img_to_array(img_test)
+    x_img_test = resize(x_img_test, (512, 512, 3), mode = 'constant', preserve_range = True)
+    #x_img = x_img.transpo0se (2,0,1)
+    #x_img = x_img.reshape (im_height, im_width, 1)
+    X_test[n] = x_img_test/255.0 
+     
+for n, id_ in tqdm(enumerate(ids1_test), total = len(ids1_test)):
+    mask_test = load_img ('/data/ababdoll/Abi/paper6(road)/data/data_original/y2/' +id_)
+    mask_test = img_to_array(mask_test)
+    mask_test = resize(mask_test, (512, 512, 3), mode = 'constant', preserve_range = True)
+    
+    #mask = mask.transpose (2,0,1)
+    #mask = mask.reshape (im_height, im_width, 1)
+    y_test[n] = mask_test/255.0
+## construct the training image generator for data augmentation
+batch_size=2
+
+img_train = ImageDataGenerator(vertical_flip=True, horizontal_flip=True, rotation=..., fill_mode='nearest')
+mask_train = ImageDataGenerator(vertical_flip=True, horizontal_flip=True, fill_mode='nearest')
+img_train.fit(X, augment=True)
+mask_train.fit(y, augment=True)
+x_train = img_train.flow(X, batch_size=batch_size)
+Y_train = mask_train.flow(y, batch_size=batch_size)
+##
+img_val = ImageDataGenerator(vertical_flip=True, horizontal_flip=True, fill_mode='nearest')
+mask_val = ImageDataGenerator(vertical_flip=True, horizontal_flip=True, fill_mode='nearest')
+img_val.fit(X_val, augment=True)
+mask_val.fit(y_val, augment=True)
+x_val = img_val.flow(X_val, batch_size=batch_size)
+Y_val = mask_val.flow(y_val, batch_size=batch_size)
+###
+generator = zip(x_train,Y_train)
+generator1 = zip(x_val,Y_val)
