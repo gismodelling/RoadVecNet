@@ -7,7 +7,7 @@ road networks by making whole utilization of feature maps generated previously.T
 
 # Prerequisties and Run
 
-This code has been implemented in python language using Keras libarary with tensorflow backend and tested, though should be compatible with related environment. 
+This code has been implemented in python language using Keras library with tensorflow backend and tested, though should be compatible with related environment. 
 following Environement and Library needed to run the code:
 
 Python 3 over Keras - tensorflow backend
