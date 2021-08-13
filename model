@@ -4,6 +4,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.applications import *
 import numpy as np
 import cv2
+layers = tf.keras.layers
+
 def squeeze_excite_block(inputs, ratio=8):
     init = inputs
     channel_axis = -1
@@ -104,6 +106,53 @@ def Upsample(tensor, size):
         return tf.image.resize(images=x, size=size)
     return Lambda(lambda x: _upsample(x, size), output_shape=size)(tensor)
 
+import tensorflow as tf
+
+import os, sys
+
+
+def Upsampling(inputs,scale):
+    return tf.image.resize_bilinear(inputs, size=[tf.shape(inputs)[1]*scale,  tf.shape(inputs)[2]*scale])
+
+
+
+def DDSPP(x, filter):
+    shape = x.shape
+
+    y1 = AveragePooling2D(pool_size=(shape[1], shape[2]))(x)
+    y1 = Conv2D(filter, 1, padding="same")(y1)
+    y1 = BatchNormalization()(y1)
+    y1 = Activation("relu")(y1)
+    y1 = UpSampling2D((shape[1], shape[2]), interpolation='bilinear')(y1)
+    
+    y1 = Concatenate()([x, y1])
+    y2 = Conv2D(filter, 1, dilation_rate=2, padding="same", use_bias=False)(x)
+    y2 = BatchNormalization()(y2)
+    y2 = Activation("relu")(y2)
+    
+    y2 = Concatenate()([x, y1, y2])
+    y3 = Conv2D(filter, 3, dilation_rate=4, padding="same", use_bias=False)(x)
+    y3 = BatchNormalization()(y3)
+    y3 = Activation("relu")(y3)
+    
+    y3 = Concatenate()([x, y1, y2, y3])
+    y4 = Conv2D(filter, 3, dilation_rate=8, padding="same", use_bias=False)(x)
+    y4 = BatchNormalization()(y4)
+    y4 = Activation("relu")(y4)
+    
+    y4 = Concatenate()([x, y1, y2, y3, y4])
+    y5 = Conv2D(filter, 3, dilation_rate=12, padding="same", use_bias=False)(x)
+    y5 = BatchNormalization()(y5)
+    y5 = Activation("relu")(y5)
+
+    y = Concatenate()([x, y1, y2, y3, y4, y5])
+
+    y = Conv2D(filter, 1, dilation_rate=1, padding="same", use_bias=False)(y)
+    y = BatchNormalization()(y)
+    y = Activation("relu")(y)
+
+    return y
+
 # vertical edge detection
 sobel_x = np.array([[-1, 0, 1],
                    [-2, 0, 2],
@@ -112,21 +161,21 @@ sobel_x = np.array([[-1, 0, 1],
 def build_model1(shape):
     inputs = Input(shape)
     x, skip_1 = encoder1(inputs)
-    #x = ASPP(x, 64)
+    x = DDSPP(x, 64)
     x = decoder1(x, skip_1)
     outputs1 = output_block(x)
 
   
 
     model = Model(inputs, outputs1)
-    model.compile(optimizer = Adam(lr = learning_rate), loss = ..., metrics = ['accuracy'])
+    #model.compile(optimizer = Adam(lr = learning_rate), loss = ..., metrics = ['accuracy'])
 
     return model
 
 def build_model2(shape):
     inputs = Input(shape)
     x, skip_1 = encoder1(inputs)
-    #x = ASPP(x, 64)
+    x = DDSPP(x, 64)
     x = decoder1(x, skip_1)
     outputs1 = output_block(x)
 
@@ -138,10 +187,10 @@ def build_model2(shape):
     outputs2 = output_block(x)
     filtered_image1 = tf.image.sobel_edges(outputs2)
 
-    #outputs = Concatenate()([outputs1, x])
+    #outputs = Concatenate()([outputs1, outputs2])
 
     model = Model(inputs, outputs2)
-    model.compile(optimizer = Adam(lr = learning_rate), loss = ..., metrics = ['accuracy'])
+    #model.compile(optimizer = Adam(lr = learning_rate), loss = ..., metrics = ['accuracy'])
 
     return model
 
@@ -150,21 +199,21 @@ model2 = build_model2((512, 512, 3))
 
 model1.summary()
 
-train_steps = (len(train_x)//batch_size)
-valid_steps = (len(valid_x)//batch_size)
+# train_steps = (len(train_x)//batch_size)
+# valid_steps = (len(valid_x)//batch_size)
 
-if len(train_x) % batch_size != 0:
-    train_steps += 1
+# if len(train_x) % batch_size != 0:
+#     train_steps += 1
 
-if len(valid_x) % batch_size != 0:
-    valid_steps += 1
+# if len(valid_x) % batch_size != 0:
+#     valid_steps += 1
 
-model.fit(genearte,
-        epochs=epochs,
-        validation_data=generate1,
-        steps_per_epoch=train_steps,
-        validation_steps=valid_steps,
-        shuffle=False)
+# model.fit(genearte,
+#         epochs=epochs,
+#         validation_data=generate1,
+#         steps_per_epoch=train_steps,
+#         validation_steps=valid_steps,
+#         shuffle=False)
 
-steps = len(test_img)//BS
-preds_test = model.predict_generator(test_img, steps, verbose=1)
+# steps = len(test_img)//BS
+# preds_test = model.predict_generator(test_img, steps, verbose=1)
