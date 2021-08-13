@@ -58,18 +58,7 @@ def decoder1(inputs, skip_connections):
 
     return x
 
-# def encoder2(inputs):
-#     skip_connections = []
-#
-#     output = DenseNet121(include_top=False, weights='imagenet')(inputs)
-#     model = tf.keras.models.Model(inputs, output)
-#
-#     names = ["input_2", "conv1/relu", "pool2_conv", "pool3_conv"]
-#     for name in names:
-#         skip_connections.append(model.get_layer(name).output)
-#     output = model.get_layer("pool4_conv").output
-#
-#     return output, skip_connections
+
 
 def encoder2(inputs):
     num_filters = [32, 64, 128, 256]
