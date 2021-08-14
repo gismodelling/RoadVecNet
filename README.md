@@ -6,7 +6,7 @@ segmentation and road vectorization challenges at the same time. Particularly, R
 is capable of obtaining more coherent and satisfactory road segmentation maps even under complex urban setup, and the second network is linked to the first network to vectorize
 road networks by making whole utilization of feature maps generated previously.Two types of high-resolution remote sensing datasets, i.e., Aerial and Google Earth imagery, were used for both road segmentation and road vectorization tasks.
 
-# Prerequisties and Run
+# Prerequisites and Run
 
 This code has been implemented in python language using Keras library with tensorflow backend and tested, though should be compatible with related environment. 
 following Environement and Library needed to run the code:
