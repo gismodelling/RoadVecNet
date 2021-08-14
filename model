@@ -161,7 +161,7 @@ def build_model1(shape):
   
 
     model = Model(inputs, outputs1)
-    #model.compile(optimizer = Adam(lr = learning_rate), loss = ..., metrics = ['accuracy'])
+    #model.compile(optimizer = Adam(lr = learning_rate), loss = [], metrics = ['accuracy'])
 
     return model
 
@@ -183,7 +183,7 @@ def build_model2(shape):
     outputs = Concatenate()([outputs1, outputs2])
 
     model = Model(inputs, outputs)
-    #model.compile(optimizer = Adam(lr = learning_rate), loss = ..., metrics = ['accuracy'])
+    #model.compile(optimizer = Adam(lr = learning_rate), loss = [], metrics = ['accuracy'])
 
     return model
 
