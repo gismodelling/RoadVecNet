@@ -1,4 +1,4 @@
-# RoadVecNet
+# Simultaneous-Road-Network-Segmentation-and-Vectorization
 
 We present a new automatic deep learning-based network, i.e., a Road Vectorization Network (RoadVecNet) that comprises interlinked convolutional UNet networks to tackle road
 segmentation and road vectorization challenges at the same time. Particularly, RoadVecNet contains two UNet networks. The first network with powerful representation capability
