@@ -206,3 +206,4 @@ model1.summary()
 
 # steps = len(test_img)//BS
 # preds_test = model.predict_generator(test_img, steps, verbose=1)
+filtered_image2 = tf.image.sobel_edges(preds_test[0])
