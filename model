@@ -58,7 +58,18 @@ def decoder1(inputs, skip_connections):
 
     return x
 
-
+# def encoder2(inputs):
+#     skip_connections = []
+#
+#     output = DenseNet121(include_top=False, weights='imagenet')(inputs)
+#     model = tf.keras.models.Model(inputs, output)
+#
+#     names = ["input_2", "conv1/relu", "pool2_conv", "pool3_conv"]
+#     for name in names:
+#         skip_connections.append(model.get_layer(name).output)
+#     output = model.get_layer("pool4_conv").output
+#
+#     return output, skip_connections
 
 def encoder2(inputs):
     num_filters = [32, 64, 128, 256]
@@ -88,14 +99,15 @@ def output_block(inputs):
     x = Conv2D(1, (1, 1), padding="same")(inputs)
     x = Activation('sigmoid')(x)
     return x
+def output_block1(inputs):
+    x = Conv2D(1, (1, 1), padding="same")(inputs)
+    return x
 
 def Upsample(tensor, size):
     """Bilinear upsampling"""
     def _upsample(x, size):
         return tf.image.resize(images=x, size=size)
     return Lambda(lambda x: _upsample(x, size), output_shape=size)(tensor)
-
-
 
 def DDSPP(x, filter):
     shape = x.shape
@@ -158,27 +170,27 @@ def build_model2(shape):
     x, skip_1 = encoder1(inputs)
     x = DDSPP(x, 64)
     x = decoder1(x, skip_1)
-    outputs1 = output_block(x)
+    outputs1 = output_block1(x)
 
-    #x = inputs * outputs1
+    x = inputs * outputs1
 
     x, skip_2 = encoder2(outputs1)
-    #x = ASPP(x, 64)
+    x = DDSPP(x, 64)
     x = decoder2(x, skip_1, skip_2)
     outputs2 = output_block(x)
-    filtered_image1 = tf.image.sobel_edges(outputs2)
+    #filtered_image1 = tf.image.sobel_edges(outputs2)
 
-    #outputs = Concatenate()([outputs1, outputs2])
+    outputs = Concatenate()([outputs1, outputs2])
 
-    model = Model(inputs, outputs2)
-    #model.compile(optimizer = Adam(lr = learning_rate), loss = [], metrics = ['accuracy'])
+    model = Model(inputs, outputs)
+    #model.compile(optimizer = Adam(lr = learning_rate), loss = ..., metrics = ['accuracy'])
 
     return model
 
 model1 = build_model1((512, 512, 3))
 model2 = build_model2((512, 512, 3))
 
-model1.summary()
+model2.summary()
 
 # train_steps = (len(train_x)//batch_size)
 # valid_steps = (len(valid_x)//batch_size)
@@ -198,4 +210,4 @@ model1.summary()
 
 # steps = len(test_img)//BS
 # preds_test = model.predict_generator(test_img, steps, verbose=1)
-filtered_image2 = tf.image.sobel_edges(preds_test[0])
+#filtered_image1 = tf.image.sobel_edges(preds_test[0])
