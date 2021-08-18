@@ -199,4 +199,13 @@ model2.summary()
 
 # steps = len(test_img)//BS
 # preds_test = model.predict_generator(test_img, steps, verbose=1)
-#filtered_image1 = tf.image.sobel_edges(preds_test[0])
+#next(preds_test)[0].shape
+#count =0
+#for img in preds_test:
+#    print ('image', img.shape)
+#    filtered_image1 = tf.image.sobel_edges(img[0])
+#    plt.imshow(filtered_image1[0])
+#    count+=1
+#    if count>1:
+#        break
+#
