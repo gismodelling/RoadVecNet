@@ -204,6 +204,7 @@ model2.summary()
 #for img in preds_test:
 #    print ('image', img.shape)
 #    filtered_image1 = tf.image.sobel_edges(img[0])
+#    filtered_image2 = cv2.Sobel(src=filtered_image1, ddepth=cv2.CV_64F, dx=1, dy=1, ksize=5) 
 #    plt.imshow(filtered_image1[0])
 #    count+=1
 #    if count>1:
